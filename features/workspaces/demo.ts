@@ -1,0 +1,21 @@
+import type { Context, Statement } from '../../lib/domain/types.ts';
+import { check } from '../../lib/domain/validation.ts';
+import { requireMembership, atomic, audit } from '../../lib/server/access.ts';
+import { getWorkspace } from '../../lib/server/workspaces.ts';
+export async function createDemoWorkspace(ctx: Context) { check(ctx.actor?.userId, 'Sign in to continue.', 401); const existing = await ctx.db.first('SELECT id FROM workspaces WHERE ownerId=? AND isDemo=1', [ctx.actor.userId]); if (existing)
+    return getWorkspace(ctx, existing.id); const digest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(ctx.actor.userId)))).map(x => x.toString(16).padStart(2, '0')).join('').slice(0, 20), w = crypto.randomUUID(), c = crypto.randomUUID(), now = ctx.now().toISOString(), deadline = new Date(ctx.now().getTime() + 7 * 86400000).toISOString(); const ops: Statement[] = [{ sql: "INSERT INTO workspaces(id,ownerId,name,slug,brandColor,timezone,isDemo,createdAt) VALUES(?,?,?,?,'#4be2da','America/Chicago',1,?)", args: [w, ctx.actor.userId, 'The Arcade · Demo', 'demo-' + digest, now] }, { sql: "INSERT INTO memberships(id,workspaceId,userId,role,status) VALUES(?,?,?,'owner','active'),(?,?,?,'editor','active')", args: [crypto.randomUUID(), w, ctx.actor.userId, crypto.randomUUID(), w, 'sample-editor'] }, { sql: "INSERT INTO challenges(id,workspaceId,creatorId,slug,title,game,description,rules,criteria,deadline,originalDeadline,state,createdAt) VALUES(?,?,?,?,?,?,?,?,?,?,?,'published',?)", args: [c, w, ctx.actor.userId, 'sample-' + digest, 'The weekly highlight reel', 'Open-world games', 'Sample challenge. Explore the review queue and editorial workflow.', 'Sample data only. Create your own challenge for real submissions.', 'Creativity, timing, and entertainment.', deadline, deadline, now] }]; for (let n = 0; n < 4; n++) {
+    const e = crypto.randomUUID(), names = ['NeonDriver', 'PixelPilot', 'Teddy', 'ArcadeAce'], states = ['shortlisted', 'shortlisted', 'accepted', 'pending'];
+    ops.push({ sql: 'INSERT INTO entries(id,challengeId,submitterId,displayName,description,clipUrl,consentAt,state,createdAt) VALUES(?,?,?,?,?,?,?,?,?)', args: [e, c, 'sample-viewer-' + n, names[n], ['A cinematic city escape', 'The unexpected finish', 'A moment worth replaying', 'A new contender'][n] + ' · Illustrative sample entry', 'https://youtu.be/QdBZY2fkU-0', now, states[n], now] });
+    if (n < 2)
+        ops.push({ sql: 'INSERT INTO assignments(id,workspaceId,entryId,editorId,brief,format,dueAt,state,deliverableUrl,createdAt) VALUES(?,?,?,?,?,?,?,?,?,?)', args: [crypto.randomUUID(), w, e, 'sample-editor', 'Sample assignment: build a 30-second vertical short.', 'Vertical 9:16', deadline, n === 0 ? 'in_review' : 'editing', n === 0 ? 'https://youtu.be/QdBZY2fkU-0' : '', now] });
+} ops.push(audit(ctx, w, 'demo.created', w)); try {
+    await atomic(ctx, ops);
+}
+catch (e) {
+    const row = await ctx.db.first('SELECT id FROM workspaces WHERE ownerId=? AND isDemo=1', [ctx.actor.userId]);
+    if (row)
+        return getWorkspace(ctx, row.id);
+    throw e;
+} return getWorkspace(ctx, w); }
+export async function getDashboard(ctx: Context, w: string) { const m = await requireMembership(ctx, w); const count = async (q: string, a: any[] = []) => Number((await ctx.db.first(q, a))?.count ?? 0); if (m.role === 'editor')
+    return { activeChallenges: null, submissionCount: null, shortlistedCount: null, awaitingReviewCount: null, assignedTasks: await count('SELECT COUNT(*) AS count FROM assignments WHERE workspaceId=? AND editorId=? AND archivedAt IS NULL', [w, ctx.actor.userId]) }; return { activeChallenges: await count("SELECT COUNT(*) AS count FROM challenges WHERE workspaceId=? AND state='published' AND deadline>?", [w, ctx.now().toISOString()]), submissionCount: await count('SELECT COUNT(*) AS count FROM entries e JOIN challenges c ON c.id=e.challengeId WHERE c.workspaceId=?', [w]), shortlistedCount: await count("SELECT COUNT(*) AS count FROM entries e JOIN challenges c ON c.id=e.challengeId WHERE c.workspaceId=? AND e.state='shortlisted'", [w]), awaitingReviewCount: await count("SELECT COUNT(*) AS count FROM assignments WHERE workspaceId=? AND state='in_review' AND archivedAt IS NULL", [w]), assignedTasks: null }; }

@@ -1,0 +1,8 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { harness } from './helpers/database.ts';
+import { createWorkspace } from '../lib/server/workspaces.ts';
+import { createChallenge, updateChallenge, transitionChallenge, isAccepting } from '../lib/server/challenges.ts';
+export async function setupChallenge() { const h = harness(), w = await createWorkspace(h.owner, { name: 'Den', slug: 'den', brandColor: '#4be2da', timezone: 'America/Chicago' }); const input = { title: 'Funny moments', game: 'GTA V', description: 'Show your moment', rules: 'One original clip', criteria: 'Funniest moment', deadline: '2026-10-16T04:00:00Z' }; const c = await createChallenge(h.owner, w.id, input); return { h, w, c, input }; }
+test('publish needs rules, viewer cannot publish, stale edits reject', async () => { const { h, w, c, input } = await setupChallenge(); await assert.rejects(transitionChallenge(h.viewer, c.id, 'publish', 0), { status: 404 }); await updateChallenge(h.owner, c.id, { ...input, rules: '' }, 0); await assert.rejects(transitionChallenge(h.owner, c.id, 'publish', 1), { status: 422 }); await assert.rejects(updateChallenge(h.owner, c.id, input, 0), { status: 409 }); });
+test('deadline extension is audited and equality stops submissions', async () => { const { h, c, input } = await setupChallenge(); let p = await transitionChallenge(h.owner, c.id, 'publish', 0); p = await updateChallenge(h.owner, c.id, { ...input, deadline: '2026-10-17T04:00:00Z' }, p.version); assert.equal((await h.db.first("SELECT COUNT(*) AS count FROM auditEvents WHERE action='challenge.deadline_extended'"))?.count, 1); h.setTime(p.deadline); assert.equal(isAccepting(p, h.owner.now()), false); });

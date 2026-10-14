@@ -1,0 +1,4 @@
+import { harness } from './database.ts';
+import { createWorkspace } from '../../lib/server/workspaces.ts';
+import { createChallenge, transitionChallenge } from '../../lib/server/challenges.ts';
+export async function fixture() { const h = harness(); const w = await createWorkspace(h.owner, { name: 'Den', slug: 'den', brandColor: '#4be2da', timezone: 'America/Chicago' }); let c = await createChallenge(h.owner, w.id, { title: 'Best moment', game: 'GTA V', description: 'Show your moment', rules: 'Original footage only', criteria: 'Creative execution', deadline: '2026-10-16T04:00:00Z' }); c = await transitionChallenge(h.owner, c.id, 'publish', 0); const entry = { displayName: 'Teddy', description: 'My moment', clipUrl: 'https://youtu.be/abcdefghi12', consent: true }; return { h, w, c, entry }; }

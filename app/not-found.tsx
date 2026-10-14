@@ -1,0 +1,1 @@
+export default function NotFound() { return <div className="empty-state"><h1>This page isn't in the arcade.</h1><p>Check the link or return to your workspace.</p><a className="button primary" href="/dashboard">Open workspace</a></div>; }
