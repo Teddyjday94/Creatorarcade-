@@ -4,6 +4,10 @@ Gaming challenge + editing workflow app: **ChallengeHub** (viewer challenges, ju
 
 Built on Vinext (Next-style app routes) running as a Cloudflare Worker with D1 (SQLite).
 
+## Going live
+
+See **SETUP.md**: Cloudflare login, create the D1 database, `pnpm ship <database id>`, then add Google / Discord / Twitch credentials as secrets.
+
 ## Run it locally
 
 ```sh
@@ -11,25 +15,19 @@ pnpm install --frozen-lockfile
 pnpm dev            # http://127.0.0.1:5173
 ```
 
-No database setup needed: the schema in `drizzle/` is applied automatically the first time an empty database is used.
+Copy `.dev.vars.example` to `.dev.vars`. Migrations in `drizzle/` apply automatically on first request (tracked in the `appMigrations` table).
 
-Open `/signin`, pick a persona, and go.
+## Auth modes
 
-## Demo mode (default)
+Set `AUTH_MODE` as a Worker variable (`.dev.vars` locally):
 
-`AUTH_MODE` defaults to `demo`. Visitors choose one of three personas on `/signin`:
+- `oauth` (default): real accounts via Google, Discord, and Twitch. Only providers with both a client id and secret are shown. Sessions are 30-day random tokens in an HttpOnly cookie; only a SHA-256 hash is stored. Code in `lib/auth.ts`, `lib/server/oauth.ts`, `lib/server/accounts.ts`, and `app/auth/`.
+- `demo`: persona sign-in (Maya the owner, Jules the editor, Rico the viewer, or a new guest) with a seeded, resettable demo arcade. Good for local testing and pitches. Not real security.
+- `sites`: trusts ChatGPT Sites headers. Only safe behind that platform.
 
-| Persona | Role | Lands on |
-| --- | --- | --- |
-| Maya Rivers | Workspace owner | Dashboard |
-| Jules Park | Editor | ClipCrew board |
-| Rico Vance | Viewer | Live challenges (`/play`) |
+Each provider account is its own CreatorArcade account (Google and Discord sign-ins are not merged, even with the same email).
 
-There is also "Continue as a new guest" for a blank identity (second viewer, invite redemption, starting a workspace from zero).
-
-The first sign-in seeds **Maya's Arcade · Demo** with four challenges, one at every stage (draft, live, judging, results live), 17 entries, ClipCrew tasks in every column (one overdue), comments, and an activity feed. Maya can hit **Reset demo data** in the banner to restore it.
-
-A good 5 minute demo script:
+### Demo script (AUTH_MODE=demo)
 
 1. Rico: `/play` → open *The weekly highlight reel* → submit a YouTube link.
 2. Maya: Dashboard → *3 new entries to review* → Shortlist Rico in one click → *Send to ClipCrew* (editor Jules).
@@ -37,16 +35,7 @@ A good 5 minute demo script:
 4. Maya: *Edit ready for review* → Approve.
 5. Maya: *Pick your winners* (Rooftop Rally) → set 1st/2nd/3rd → Publish → open results page and OBS overlay.
 
-Demo identities are not real authentication. Anyone with the link can pick any persona. Do not put real community data in a demo-mode deployment.
-
-## Auth modes
-
-Set `AUTH_MODE` as a Worker variable (`.dev.vars` locally, `wrangler.json` vars or dashboard in production):
-
-- `demo` (default): persona cookie, see `lib/auth.ts`.
-- `sites`: trusts `oai-authenticated-user-*` headers. Only safe behind the original ChatGPT Sites platform.
-
-For production, add a third mode in `lib/auth.ts` backed by a real provider (Cloudflare Access, Clerk, Auth.js...). `getUser()` just needs to return a verified, stable `userId`. All authorization (owner/editor/viewer, membership, assignment checks) lives server-side in `lib/server/` and is unchanged.
+In `oauth` mode anyone can still open a private sample arcade from the empty dashboard. Demo workspaces are hidden from the public `/play` page.
 
 ## Public routes
 
@@ -55,7 +44,7 @@ For production, add a third mode in `lib/auth.ts` backed by a real provider (Clo
 ## Checks
 
 ```sh
-node --experimental-strip-types --test tests/*.test.ts   # 40 tests
+node --experimental-strip-types --test tests/*.test.ts   # 44 tests
 pnpm exec tsc --noEmit
 node scripts/check-source.mjs
 pnpm build
@@ -65,4 +54,4 @@ pnpm build
 
 ## Deploying
 
-The build output is a Cloudflare Worker (`dist/server/wrangler.json`). To deploy independently: create a D1 database, put its id in the D1 binding, set `AUTH_MODE`, and run `wrangler deploy`. This is not a standard Vercel/Next.js deployment. See `CLAUDE-HANDOFF.md` for the original hosting notes and `docs/demo-pass-2026-10-14.md` for what changed in this pass.
+`pnpm ship <D1 database id>` builds and runs `wrangler deploy`. Full walkthrough in SETUP.md. This is a Cloudflare Worker, not a Vercel project.

@@ -12,7 +12,7 @@ export const metadata = { title: 'Live challenges' };
 export default async function Page() {
   const user = await getUser();
   const ctx = await publicContext();
-  const { live, mine } = await listPlayable(ctx);
+  const { live, mine } = await listPlayable(ctx, isDemoAuth());
   const open = live.filter((c) => c.state === 'published');
   const wrapped = live.filter((c) => c.state === 'results_published');
   return (

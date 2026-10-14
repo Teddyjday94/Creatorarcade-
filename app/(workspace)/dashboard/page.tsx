@@ -5,7 +5,7 @@ import { getDashboard, listActivity } from '@/features/workspaces/demo';
 import { listChallenges } from '@/lib/server/challenges';
 import { listAssignments } from '@/lib/server/assignments';
 import { PageHeader, WorkspaceStart, ChallengeCard, Empty, Status, Avatar, relativeTime } from '@/components/arcade/ui';
-import { userLabel } from '@/lib/personas';
+import { labeler } from '@/lib/server/people';
 import { formatDeadline } from '@/lib/domain/time';
 
 export const dynamic = 'force-dynamic';
@@ -45,6 +45,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const activity = owner ? await listActivity(ctx, w.id) : [];
   const now = Date.now();
   const q = '?workspace=' + w.id;
+  const userLabel = await labeler(ctx, [...activity.map((a) => a.actorId), ...tasks.map((t) => t.editorId)]);
 
   if (!owner) {
     const open = tasks.filter((t) => t.state !== 'approved');
@@ -140,7 +141,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
       </section>
       <section className="section">
         <div className="section-heading"><h2>In the editing room</h2><Link href={'/clipcrew' + q}>Open ClipCrew <ArrowUpRight size={15} /></Link></div>
-        <TaskList tasks={tasks.slice(0, 5)} w={w} now={now} empty="Accepted entries can become editing assignments here." showEditor />
+        <TaskList tasks={tasks.slice(0, 5)} w={w} now={now} empty="Accepted entries can become editing assignments here." label={userLabel} />
       </section>
     </>
   );
@@ -158,7 +159,7 @@ function Metric({ icon: Icon, label, value, sub, href, tone }: { icon: any; labe
   return href ? <Link className={cls} href={href}>{body}</Link> : <div className={cls}>{body}</div>;
 }
 
-function TaskList({ tasks, w, now, empty, showEditor = false }: { tasks: any[]; w: any; now: number; empty: string; showEditor?: boolean }) {
+function TaskList({ tasks, w, now, empty, label }: { tasks: any[]; w: any; now: number; empty: string; label?: (id: string) => string }) {
   return (
     <div className="panel task-list">
       {tasks.length ? (
@@ -169,7 +170,7 @@ function TaskList({ tasks, w, now, empty, showEditor = false }: { tasks: any[]; 
               <Avatar name={t.displayName} />
               <div>
                 <strong>{t.displayName}&apos;s moment</strong>
-                <small>{t.challengeTitle} · {t.format}{showEditor ? ' · ' + userLabel(t.editorId) : ''}</small>
+                <small>{t.challengeTitle} · {t.format}{label ? ' · ' + label(t.editorId) : ''}</small>
               </div>
               <small className={'due ' + (overdue ? 'overdue' : '')}>{overdue ? 'Overdue · ' : 'Due '}{formatDeadline(t.dueAt, w.timezone)}</small>
               <Status state={t.state} />

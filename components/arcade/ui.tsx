@@ -102,7 +102,7 @@ export function WorkspaceStart() {
         <section className="panel">
           <h2>Create your workspace</h2>
           <p className="muted">Start empty and make it yours.</p>
-          <ActionForm path="/api/workspaces" label="Create workspace" successRoute="/dashboard?workspace={id}">
+          <ActionForm path="/api/workspaces" label="Create workspace" successRoute="/dashboard?workspace={id}" hardNavigate>
             <Field label="Workspace name" name="name" maxLength={80} />
             <Field label="Workspace address" name="slug" maxLength={60} help="Lowercase letters, numbers, and single hyphens." />
             <div className="two-fields">
@@ -116,7 +116,7 @@ export function WorkspaceStart() {
           <span className="eyebrow">TAKE A LOOK AROUND</span>
           <h2>Try the demo arcade.</h2>
           <p>Four challenges at every stage, real-looking submissions, and an editing board with work in progress. Your real workspace stays separate.</p>
-          <ActionForm path="/api/demo" label="Open demo workspace" successRoute="/dashboard?workspace={id}" />
+          <ActionForm path="/api/demo" label="Open demo workspace" successRoute="/dashboard?workspace={id}" hardNavigate />
         </section>
       </div>
     </>

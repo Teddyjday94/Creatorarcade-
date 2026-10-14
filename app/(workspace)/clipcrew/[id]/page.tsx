@@ -8,7 +8,7 @@ import { listTeam } from '@/lib/server/invitations';
 import { PageHeader, Status, Avatar, stateLabel, relativeTime } from '@/components/arcade/ui';
 import { ActionForm, Field, Area } from '@/components/arcade/forms';
 import { formatDeadline } from '@/lib/domain/time';
-import { userLabel } from '@/lib/personas';
+import { labeler } from '@/lib/server/people';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +23,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const comments = await listComments(ctx, id);
   const owner = m.role === 'owner';
   const team = owner ? await listTeam(ctx, w.id) : null;
+  const userLabel = await labeler(ctx, [a.editorId, w.ownerId, ...comments.map((c) => c.authorId), ...(team?.members.map((x) => x.userId) ?? [])]);
   const isEditor = a.editorId === ctx.actor.userId;
   const overdue = Date.parse(a.dueAt) < Date.now() && a.state !== 'approved';
   const at = STAGES.indexOf(a.state);

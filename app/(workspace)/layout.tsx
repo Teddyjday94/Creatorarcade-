@@ -14,7 +14,8 @@ export default async function Layout({ children }: { children: React.ReactNode }
       user={{
         id: user.userId,
         name: user.displayName,
-        title: user.persona?.title ?? 'Creator workspace',
+        title: user.persona?.title ?? (user.provider === 'sites' ? 'Creator workspace' : 'Signed in with ' + user.provider[0].toUpperCase() + user.provider.slice(1)),
+        avatarUrl: user.avatarUrl,
         color: user.persona?.color ?? '#4be2da',
         demo: isDemoAuth(),
         signOut: signOutPath('/'),

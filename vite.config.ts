@@ -14,15 +14,20 @@ const { d1, r2 } = hostingConfig;
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
 const managedLinux = readExecutionProfile() === "managed-linux";
 
+// Production D1 id comes from the environment so it never has to be hardcoded:
+//   D1_DATABASE_ID=<id from `wrangler d1 create creatorarcade`> pnpm build
+const d1DatabaseId = process.env.D1_DATABASE_ID || SITE_CREATOR_PLACEHOLDER_DATABASE_ID;
+
 const localBindingConfig = {
+  name: "creatorarcade",
   main: "./build/sites-worker.ts",
   compatibility_flags: ["nodejs_compat"],
   d1_databases: d1
     ? [
         {
           binding: d1,
-          database_name: "site-creator-d1",
-          database_id: SITE_CREATOR_PLACEHOLDER_DATABASE_ID,
+          database_name: "creatorarcade",
+          database_id: d1DatabaseId,
         },
       ]
     : [],

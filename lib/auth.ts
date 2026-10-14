@@ -1,6 +1,9 @@
 // Identity adapter for CreatorArcade.
 //
-// AUTH_MODE=demo (default): visitors pick a demo persona on /signin. The choice is
+// AUTH_MODE=oauth (default): real accounts via Google, Discord, or Twitch. Sessions
+// are random tokens in an HttpOnly cookie; only their hash is stored (lib/server/accounts.ts).
+//
+// AUTH_MODE=demo: visitors pick a demo persona on /signin. The choice is
 // stored in an HttpOnly cookie that only ever maps to a fixed persona or a random
 // guest id, so a visitor cannot inject an arbitrary identity. This is for demos
 // and pilots only. It is NOT real authentication.
@@ -8,28 +11,34 @@
 // AUTH_MODE=sites: trusts the oai-authenticated-user-* headers. Only safe behind
 // the original ChatGPT Sites platform, which strips and re-sets those headers.
 //
-// To go to production, add a third mode backed by a real provider (Clerk, Auth.js,
-// Cloudflare Access, etc.) that returns a verified, stable userId.
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { env } from 'cloudflare:workers';
 import { PERSONAS, personaFor, type Persona } from './personas';
+import { getDatabase } from '../db';
+import { accountForSession } from './server/accounts';
 
 export type User = {
   userId: string;
   displayName: string;
   fullName: string | null;
   email: string;
+  avatarUrl: string;
+  provider: string;
   persona: Persona | null;
 };
 
 export const DEMO_COOKIE = 'ca_demo';
+export const SESSION_COOKIE = 'ca_session';
+export const OAUTH_COOKIE = 'ca_oauth';
 const SIGN_IN_PATH = '/signin';
 const SIGN_OUT_PATH = '/signout';
 
-export function authMode(): 'demo' | 'sites' {
+export type AuthMode = 'oauth' | 'demo' | 'sites';
+
+export function authMode(): AuthMode {
   const mode = (env as unknown as { AUTH_MODE?: string }).AUTH_MODE;
-  return mode === 'sites' ? 'sites' : 'demo';
+  return mode === 'sites' || mode === 'demo' ? mode : 'oauth';
 }
 
 export function isDemoAuth() {
@@ -44,10 +53,12 @@ export function demoUserIdFromCookie(value: string | undefined | null): string |
   return null;
 }
 
-function readCookie(header: string | null, name: string) {
+export function readCookie(header: string | null, name: string) {
   for (const part of (header ?? '').split(';')) {
     const [k, ...rest] = part.trim().split('=');
-    if (k === name) return decodeURIComponent(rest.join('='));
+    if (k === name) {
+      try { return decodeURIComponent(rest.join('=')); } catch { return null; }
+    }
   }
   return null;
 }
@@ -63,7 +74,12 @@ export async function getUser(): Promise<User | null> {
     if (encoded && h.get('oai-authenticated-user-full-name-encoding') === 'percent-encoded-utf-8') {
       try { fullName = decodeURIComponent(encoded); } catch { fullName = null; }
     }
-    return { userId, email, fullName, displayName: fullName ?? email, persona: null };
+    return { userId, email, fullName, displayName: fullName ?? email, avatarUrl: '', provider: 'sites', persona: null };
+  }
+  if (authMode() === 'oauth') {
+    const account = await accountForSession(getDatabase(), readCookie(h.get('cookie'), SESSION_COOKIE));
+    if (!account) return null;
+    return { userId: account.id, email: account.email, fullName: account.name, displayName: account.name, avatarUrl: account.avatarUrl, provider: account.provider, persona: null };
   }
   const userId = demoUserIdFromCookie(readCookie(h.get('cookie'), DEMO_COOKIE));
   if (!userId) return null;
@@ -73,6 +89,8 @@ export async function getUser(): Promise<User | null> {
     email: userId + '@demo.creatorarcade.local',
     fullName: persona.name,
     displayName: persona.name,
+    avatarUrl: '',
+    provider: 'demo',
     persona,
   };
 }
@@ -103,4 +121,13 @@ export function signInPath(returnTo = '/dashboard') {
 export function signOutPath(returnTo = '/') {
   if (authMode() === 'sites') return '/signout-with-chatgpt?return_to=' + encodeURIComponent(returnTo);
   return SIGN_OUT_PATH;
+}
+
+/** Worker environment, including OAuth client ids/secrets set with `wrangler secret put`. */
+export function workerEnv() {
+  return env as unknown as Record<string, string | undefined>;
+}
+
+export function cookie(name: string, value: string, opts: { maxAge: number; secure: boolean; path?: string }) {
+  return `${name}=${encodeURIComponent(value)}; Path=${opts.path ?? '/'}; HttpOnly; SameSite=Lax; Max-Age=${opts.maxAge}${opts.secure ? '; Secure' : ''}`;
 }

@@ -8,6 +8,13 @@
       "when": 1791952030311,
       "tag": "0000_third_stark_industries",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1792005998114,
+      "tag": "0001_users_and_sessions",
+      "breakpoints": true
     }
   ]
 }

@@ -16,7 +16,7 @@ export default async function Page({ params }: { params: Promise<{ token: string
         <h1>Join the editing room.</h1>
         <p>Accept this invitation to work on clips assigned to you. The invitation can be used once and expires after seven days.</p>
         <p className="muted small-text">Accepting as <strong>{user.displayName}</strong>.</p>
-        <ActionForm path="/api/invitations/redeem" values={{ token }} label="Accept editor invitation" successRoute="/clipcrew?workspace={workspaceId}" />
+        <ActionForm path="/api/invitations/redeem" values={{ token }} label="Accept editor invitation" successRoute="/clipcrew?workspace={workspaceId}" hardNavigate />
       </section>
     </div>
   );

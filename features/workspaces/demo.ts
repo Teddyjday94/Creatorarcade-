@@ -230,11 +230,11 @@ export async function listActivity(ctx: Context, w: string, limit = 8) {
 }
 
 /** Live challenges anyone signed in can join, plus the caller's own entries. */
-export async function listPlayable(ctx: Context) {
+export async function listPlayable(ctx: Context, includeDemo = true) {
   const now = ctx.now().toISOString();
   const live = await ctx.db.all(
-    "SELECT c.slug,c.title,c.game,c.description,c.deadline,c.state,w.name AS workspaceName,w.timezone,w.isDemo,(SELECT COUNT(*) FROM entries e WHERE e.challengeId=c.id) AS entryCount FROM challenges c JOIN workspaces w ON w.id=c.workspaceId WHERE (c.state='published' AND c.deadline>?) OR c.state='results_published' ORDER BY CASE c.state WHEN 'published' THEN 0 ELSE 1 END, c.deadline LIMIT 24",
-    [now],
+    "SELECT c.slug,c.title,c.game,c.description,c.deadline,c.state,w.name AS workspaceName,w.timezone,w.isDemo,(SELECT COUNT(*) FROM entries e WHERE e.challengeId=c.id) AS entryCount FROM challenges c JOIN workspaces w ON w.id=c.workspaceId WHERE ((c.state='published' AND c.deadline>?) OR c.state='results_published') AND (?=1 OR w.isDemo=0) ORDER BY CASE c.state WHEN 'published' THEN 0 ELSE 1 END, c.deadline LIMIT 24",
+    [now, includeDemo ? 1 : 0],
   );
   const mine = ctx.actor.userId
     ? await ctx.db.all(

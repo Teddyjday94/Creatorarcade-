@@ -1,26 +1,13 @@
 import { env } from 'cloudflare:workers';
 import type { Database, Statement } from '../lib/domain/types';
-import migration from '../drizzle/0000_third_stark_industries.sql?raw';
+import { migrate } from './migrations';
 
 let schemaReady: Promise<void> | null = null;
-
-// Applies the committed migration once when the database is empty, so a fresh
-// local or demo deployment works without a manual `wrangler d1 execute`.
-// It never alters an existing schema.
-async function ensureSchema(db: D1Database) {
-  const row = await db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='workspaces'").first();
-  if (row) return;
-  const statements = migration
-    .split('--> statement-breakpoint')
-    .map((s: string) => s.trim())
-    .filter(Boolean);
-  await db.batch(statements.map((s: string) => db.prepare(s)));
-}
 
 export function getDatabase(): Database {
   if (!env.DB) throw new Error('DB binding unavailable');
   const db = env.DB;
-  schemaReady ??= ensureSchema(db).catch((e) => {
+  schemaReady ??= migrate(db).catch((e) => {
     schemaReady = null;
     throw e;
   });

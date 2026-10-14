@@ -15,7 +15,7 @@ export function Brand() {
   );
 }
 
-export type ShellUser = { id: string; name: string; title: string; color: string; demo: boolean; signOut: string };
+export type ShellUser = { id: string; name: string; title: string; color: string; demo: boolean; signOut: string; avatarUrl?: string };
 
 /** Persona switcher used in demo mode. Posts to /auth/demo, which lands on the persona's home. */
 export function PersonaSwitcher({ current, compact = false }: { current: string; compact?: boolean }) {
@@ -95,12 +95,17 @@ export function Shell({ workspaces, user, children }: { workspaces: any[]; user:
             <Link className={'nav-item ' + (path.startsWith('/play') ? 'active' : '')} href="/play"><Joystick size={19} />Live challenges</Link>
           </nav>
           <div className="sidebar-note">
-            <span className="tiny-tag">{user.demo ? 'DEMO MODE' : 'PRIVATE PREVIEW'}</span>
+            <span className="tiny-tag">{user.demo ? 'DEMO MODE' : 'EARLY ACCESS'}</span>
             <p>Your community.<br />Your next great moment.</p>
             <Link href="/">Explore CreatorArcade <ArrowUpRight size={14} /></Link>
           </div>
           <div className="user-chip">
-            <span className="avatar" style={{ color: user.color, borderColor: user.color + '44', background: user.color + '14' }}>{initials(user.name)}</span>
+            {user.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img className="avatar" src={user.avatarUrl} alt="" referrerPolicy="no-referrer" />
+            ) : (
+              <span className="avatar" style={{ color: user.color, borderColor: user.color + '44', background: user.color + '14' }}>{initials(user.name)}</span>
+            )}
             <span className="user-chip-text">{user.name}<small>{user.title}</small></span>
             <a className="icon-button" href={user.signOut} aria-label="Sign out" title="Sign out"><LogOut size={16} /></a>
           </div>
@@ -118,7 +123,7 @@ export function Shell({ workspaces, user, children }: { workspaces: any[]; user:
             <div className="demo-banner">
               <span><strong>Demo workspace.</strong> Sample entries and editing tasks. Everything you change here is real and saved, so feel free to click around.</span>
               {owner && (
-                <ActionForm path="/api/demo" method="PUT" label="Reset demo data" variant="secondary" confirmText="Reset the demo workspace? All changes made in it will be replaced with fresh sample data." className="inline-form" successRoute="/dashboard?workspace={id}" successMessage="Demo reset." />
+                <ActionForm path="/api/demo" method="PUT" label="Reset demo data" variant="secondary" confirmText="Reset the demo workspace? All changes made in it will be replaced with fresh sample data." className="inline-form" successRoute="/dashboard?workspace={id}" hardNavigate successMessage="Demo reset." />
               )}
             </div>
           )}

@@ -12,7 +12,7 @@ import { QuickReview } from '@/features/challenges/quick-review';
 import { Ranks } from '@/features/challenges/ranks';
 import { localInput } from '@/lib/domain/display';
 import { formatDeadline } from '@/lib/domain/time';
-import { userLabel } from '@/lib/personas';
+import { labeler } from '@/lib/server/people';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,6 +26,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const queue = await listEntries(ctx, id, { page: Number(p.page), search: p.search, state: p.state });
   const team = await listTeam(ctx, c.workspaceId);
   const editors = team.members.filter((m) => m.role === 'editor' && m.status === 'active');
+  const userLabel = await labeler(ctx, editors.map((m) => m.userId));
   const ranks = await ctx.db.all('SELECT r.*,e.displayName FROM results r JOIN entries e ON e.id=r.entryId WHERE r.challengeId=? ORDER BY r.rank', [id]);
   const shortlist = await ctx.db.all("SELECT id,displayName,description FROM entries WHERE challengeId=? AND state='shortlisted' AND brokenLink=0 ORDER BY createdAt LIMIT 100", [id]);
   const counts = Object.fromEntries((await ctx.db.all<{ state: string; n: number }>('SELECT state,COUNT(*) AS n FROM entries WHERE challengeId=? GROUP BY state', [id])).map((r) => [r.state, Number(r.n)]));
