@@ -1,5 +1,7 @@
 # CreatorArcade: continue in Claude
 
+> **Update, October 14, 2026:** The app now runs standalone in demo mode. `app/chatgpt-auth.ts` was replaced by `lib/auth.ts`, the schema bootstraps itself, and a persona sign-in lets you demo owner, editor, and viewer flows. See `README.md` and `docs/demo-pass-2026-10-14.md`. Steps 1 and 2 below are done for demo purposes; real authentication is still the next step before inviting real users.
+
 Export date: October 14, 2026. Source commit: 582d874fadf6ed348216605229eaebf9596837e9.
 
 ## First message to Claude
