@@ -36,7 +36,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
               ))}
             </div>
           ) : (
-            <p className="notice">Sign-in is not configured yet. Add Google, Discord, or Twitch credentials as Worker secrets (see SETUP.md).</p>
+            <p className="notice">Sign-in is not configured yet. Add Google, Discord, or Twitch keys as environment variables in Vercel (see SETUP.md).</p>
           )}
           <p className="muted small-text">We only use your name, avatar, and email to set up your account. We never post on your behalf.</p>
         </section>

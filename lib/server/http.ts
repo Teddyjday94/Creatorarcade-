@@ -1,5 +1,7 @@
 import { AppError, check } from '../domain/validation.ts';
-export async function readBody(req: Request) { const origin = req.headers.get('origin'); check(origin === new URL(req.url).origin, 'Please submit from this site.', 403); check(req.headers.get('content-type')?.split(';')[0] === 'application/json', 'Use a JSON request.', 422); check(Number(req.headers.get('content-length') ?? 0) <= 32768, 'Request too large.', 413); const reader = req.body?.getReader(); check(reader, 'Request body required.'); let bytes = 0, chunks: Uint8Array[] = []; while (true) {
+/** The public origin of this request, as the browser sees it (honours the platform proxy's forwarded host). */
+export function requestOrigin(req: Request) { const url = new URL(req.url), host = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? url.host, proto = req.headers.get('x-forwarded-proto')?.split(',')[0] ?? url.protocol.replace(':', ''); return proto + '://' + host; }
+export async function readBody(req: Request) { const origin = req.headers.get('origin'); check(origin === requestOrigin(req), 'Please submit from this site.', 403); check(req.headers.get('content-type')?.split(';')[0] === 'application/json', 'Use a JSON request.', 422); check(Number(req.headers.get('content-length') ?? 0) <= 32768, 'Request too large.', 413); const reader = req.body?.getReader(); check(reader, 'Request body required.'); let bytes = 0, chunks: Uint8Array[] = []; while (true) {
     const r = await reader.read();
     if (r.done)
         break;

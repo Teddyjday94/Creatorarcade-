@@ -1,5 +1,7 @@
 # CreatorArcade: continue in Claude
 
+> **Update 3, October 14, 2026:** Moved to standard Next.js on Vercel. Storage is Turso/libSQL (same SQLite schema and queries) via `db/index.ts`; Cloudflare/vinext build tooling removed. See `SETUP.md`.
+>
 > **Update 2, October 14, 2026:** Real sign-in is in. Default `AUTH_MODE=oauth` uses Google, Discord, and Twitch with hashed server-side sessions (`users`/`sessions` tables, migration 0001). Hosting stays on Cloudflare Workers + D1; see `SETUP.md`. Demo personas remain available with `AUTH_MODE=demo`.
 >
 > **Update 1, October 14, 2026:** The app now runs standalone in demo mode. `app/chatgpt-auth.ts` was replaced by `lib/auth.ts`, the schema bootstraps itself, and a persona sign-in lets you demo owner, editor, and viewer flows. See `README.md` and `docs/demo-pass-2026-10-14.md`. Steps 1 and 2 below are done for demo purposes; real authentication is still the next step before inviting real users.

@@ -13,9 +13,8 @@
 //
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { env } from 'cloudflare:workers';
 import { PERSONAS, personaFor, type Persona } from './personas';
-import { getDatabase } from '../db';
+import { getDatabase, DatabaseNotConfigured } from '../db';
 import { accountForSession } from './server/accounts';
 
 export type User = {
@@ -37,7 +36,7 @@ const SIGN_OUT_PATH = '/signout';
 export type AuthMode = 'oauth' | 'demo' | 'sites';
 
 export function authMode(): AuthMode {
-  const mode = (env as unknown as { AUTH_MODE?: string }).AUTH_MODE;
+  const mode = process.env.AUTH_MODE;
   return mode === 'sites' || mode === 'demo' ? mode : 'oauth';
 }
 
@@ -77,7 +76,15 @@ export async function getUser(): Promise<User | null> {
     return { userId, email, fullName, displayName: fullName ?? email, avatarUrl: '', provider: 'sites', persona: null };
   }
   if (authMode() === 'oauth') {
-    const account = await accountForSession(getDatabase(), readCookie(h.get('cookie'), SESSION_COOKIE));
+    const token = readCookie(h.get('cookie'), SESSION_COOKIE);
+    if (!token) return null;
+    let account;
+    try {
+      account = await accountForSession(getDatabase(), token);
+    } catch (e) {
+      if (e instanceof DatabaseNotConfigured) return null;
+      throw e;
+    }
     if (!account) return null;
     return { userId: account.id, email: account.email, fullName: account.name, displayName: account.name, avatarUrl: account.avatarUrl, provider: account.provider, persona: null };
   }
@@ -123,9 +130,9 @@ export function signOutPath(returnTo = '/') {
   return SIGN_OUT_PATH;
 }
 
-/** Worker environment, including OAuth client ids/secrets set with `wrangler secret put`. */
+/** Server environment, including OAuth client ids/secrets (Vercel project env vars). */
 export function workerEnv() {
-  return env as unknown as Record<string, string | undefined>;
+  return process.env as Record<string, string | undefined>;
 }
 
 export function cookie(name: string, value: string, opts: { maxAge: number; secure: boolean; path?: string }) {

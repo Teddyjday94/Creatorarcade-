@@ -1,3 +1,4 @@
+import { requestOrigin } from '@/lib/server/http';
 import { authMode, cookie, OAUTH_COOKIE, readCookie, SESSION_COOKIE, workerEnv } from '@/lib/auth';
 import { exchangeCode, isProvider } from '@/lib/server/oauth';
 import { createSession, upsertAccount, SESSION_DAYS } from '@/lib/server/accounts';
@@ -16,7 +17,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ provider
   const { provider } = await params;
   const env = workerEnv();
   const url = new URL(req.url);
-  const origin = env.APP_URL?.replace(/\/$/, '') || url.origin;
+  const origin = env.APP_URL?.replace(/\/$/, '') || requestOrigin(req);
   const secure = origin.startsWith('https:');
   const clear = cookie(OAUTH_COOKIE, '', { maxAge: 0, secure, path: '/auth' });
   if (authMode() !== 'oauth' || !isProvider(provider)) return new Response('Not found', { status: 404 });

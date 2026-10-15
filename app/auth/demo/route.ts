@@ -1,3 +1,4 @@
+import { requestOrigin } from '@/lib/server/http';
 import { DEMO_COOKIE, demoUserIdFromCookie, isDemoAuth, safeReturnPath } from '@/lib/auth';
 import { personaFor } from '@/lib/personas';
 import { getDatabase } from '@/db';
@@ -8,7 +9,7 @@ export async function POST(req: Request) {
   if (!isDemoAuth()) return new Response('Not found', { status: 404 });
   const url = new URL(req.url);
   const origin = req.headers.get('origin');
-  if (origin && origin !== url.origin) return new Response('Forbidden', { status: 403 });
+  if (origin && origin !== requestOrigin(req)) return new Response('Forbidden', { status: 403 });
   const form = await req.formData();
   let persona = String(form.get('persona') ?? '');
   if (persona === 'guest') {
@@ -21,7 +22,7 @@ export async function POST(req: Request) {
   await createDemoWorkspace({ db: getDatabase(), actor: { userId: 'demo-owner' }, now: () => new Date() });
   const requested = String(form.get('return_to') ?? '');
   const target = requested && requested !== '/dashboard' ? safeReturnPath(requested) : personaFor(userId).start;
-  const secure = url.protocol === 'https:' ? '; Secure' : '';
+  const secure = requestOrigin(req).startsWith('https:') ? '; Secure' : '';
   return new Response(null, {
     status: 303,
     headers: {

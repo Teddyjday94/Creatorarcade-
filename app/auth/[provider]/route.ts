@@ -1,3 +1,4 @@
+import { requestOrigin } from '@/lib/server/http';
 import { authMode, cookie, OAUTH_COOKIE, safeReturnPath, workerEnv } from '@/lib/auth';
 import { authorizeUrl, credentials, isProvider } from '@/lib/server/oauth';
 import { randomToken } from '@/lib/server/accounts';
@@ -8,7 +9,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ provider
   const env = workerEnv();
   if (authMode() !== 'oauth' || !isProvider(provider) || !credentials(provider, env)) return new Response('Not found', { status: 404 });
   const url = new URL(req.url);
-  const origin = env.APP_URL?.replace(/\/$/, '') || url.origin;
+  const origin = env.APP_URL?.replace(/\/$/, '') || requestOrigin(req);
   const state = randomToken(24);
   const verifier = randomToken(32);
   const returnTo = safeReturnPath(url.searchParams.get('return_to'));
