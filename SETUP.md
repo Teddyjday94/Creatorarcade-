@@ -2,12 +2,16 @@
 
 About 30 minutes, all on free plans. Commands are for the VS Code terminal (PowerShell is fine), run inside the `CreatorArcade` folder.
 
+## 0. Install dependencies
+
+In a freshly unzipped folder, run `pnpm install` once first.
+
 ## 1. Log in to Cloudflare
 
 Make a free account at dash.cloudflare.com if you do not have one, then:
 
 ```
-pnpm exec wrangler login
+pnpm wrangler login
 ```
 
 A browser window opens. Approve it.
@@ -15,7 +19,7 @@ A browser window opens. Approve it.
 ## 2. Create the database
 
 ```
-pnpm exec wrangler d1 create creatorarcade
+pnpm wrangler d1 create creatorarcade
 ```
 
 Copy the `database_id` it prints (looks like `1a2b3c4d-....`). Keep it somewhere; you need it every time you deploy.
@@ -60,12 +64,12 @@ Local versions: `http://127.0.0.1:5173/auth/google/callback` (same pattern for d
 Run each line and paste the value when asked. Skip any provider you did not set up; its button simply will not show.
 
 ```
-pnpm exec wrangler secret put GOOGLE_CLIENT_ID --name creatorarcade
-pnpm exec wrangler secret put GOOGLE_CLIENT_SECRET --name creatorarcade
-pnpm exec wrangler secret put DISCORD_CLIENT_ID --name creatorarcade
-pnpm exec wrangler secret put DISCORD_CLIENT_SECRET --name creatorarcade
-pnpm exec wrangler secret put TWITCH_CLIENT_ID --name creatorarcade
-pnpm exec wrangler secret put TWITCH_CLIENT_SECRET --name creatorarcade
+pnpm wrangler secret put GOOGLE_CLIENT_ID --name creatorarcade
+pnpm wrangler secret put GOOGLE_CLIENT_SECRET --name creatorarcade
+pnpm wrangler secret put DISCORD_CLIENT_ID --name creatorarcade
+pnpm wrangler secret put DISCORD_CLIENT_SECRET --name creatorarcade
+pnpm wrangler secret put TWITCH_CLIENT_ID --name creatorarcade
+pnpm wrangler secret put TWITCH_CLIENT_SECRET --name creatorarcade
 ```
 
 Secrets take effect right away. Refresh `/signin` and the buttons appear.
@@ -86,7 +90,7 @@ Make changes, then run `pnpm ship <your database_id>` again. Data is kept betwee
 Cloudflare dashboard → Workers & Pages → creatorarcade → Settings → Domains & Routes → Add custom domain. The domain's DNS has to be managed by Cloudflare (a domain bought elsewhere can be moved to Cloudflare DNS for free). Then:
 
 1. Add the new `https://yourdomain/auth/<provider>/callback` URLs in each provider console.
-2. `pnpm exec wrangler secret put APP_URL --name creatorarcade` with `https://yourdomain`.
+2. `pnpm wrangler secret put APP_URL --name creatorarcade` with `https://yourdomain`.
 
 ## Local development
 
